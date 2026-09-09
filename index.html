@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Skills Dashboard — angieCREATEs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500;1,6..72,600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:#100c07; }
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: #16110e; }
+  ::-webkit-scrollbar-thumb { background: #3a322c; border-radius: 8px; border: 3px solid #16110e; }
+  @keyframes scd-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes scd-pop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  input:focus, select:focus, textarea:focus { outline: none; }
+  input::placeholder, textarea::placeholder { color: #8a817a; }
+  .scd-card { transition: transform .14s ease, box-shadow .14s ease; }
+  .scd-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -12px rgba(0,0,0,.45); }
+  .scd-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .scd-btn-gold:hover { filter: brightness(1.06); }
+  .scd-close:hover { background:#332a22 !important; }
+  .scd-cancel:hover { background:#241d17 !important; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ---- data model -------------------------------------------------------------
+// C = command, S = skill. project defaults to the Short System when omitted.
+const SHORT = "Claude Code Short System";
+const C = (title, command, desc, category, project) => ({ title, command, desc, category, type: "command", project: project || SHORT });
+const S = (title, command, desc, category, project) => ({ title, command, desc, category, type: "skill",    project: project || SHORT });
+
+const SEED = [
+  // ---- Claude Code Short System (original) ----
+  // Content Creation
+  C("Angle", "/angle", "Evaluate a sponsored video opportunity and find unique angles for: ...", "Content Creation"),
+  C("Approve Carousel", "/approve-carousel", "Reviews the pending carousel staged by '/claude-trending', uploads the slides to the queue...", "Content Creation"),
+  C("Batch", "/batch", "Research 5 trending AI topics and generate a full video script for each one.", "Content Creation"),
+  C("Checkin", "/checkin", "Check all recent post stats vs historical data, surface milestones and anomalies...", "Content Creation"),
+  C("Claude Trending", "/claude-trending", "Runs the daily pipeline: scrape Claude/Anthropic news → dedupe → pick → stage carousel...", "Content Creation"),
+  S("Daily Claude Carousels", "skill: daily-claude-carousels", "Daily trending-Claude-news Instagram carousel pipeline. Scrapes the last 24h of news...", "Content Creation"),
+  C("Description", "/description", "Generate a YouTube description and optimized tags from a transcript: ...", "Content Creation"),
+  C("Film", "/film", "Generate an interactive teleprompter board for filming. Paste your scripts or transcript...", "Content Creation"),
+  C("Filmed", "/filmed", "Mark a script as filmed in the pipeline. Usage: /filmed [topic name, keyword, or ID]", "Content Creation"),
+  C("Help", "/help", "Show all available commands with descriptions and examples.", "Content Creation"),
+  C("Hooks", "/hooks", "Generate 5 hook variations for: ...", "Content Creation"),
+  S("Ig Carousel", "skill: ig-carousel", "Generate premium Instagram carousel posts using Gemini image generation...", "Content Creation"),
+  C("Ig Cover 3D", "/ig-cover-3d", "Generate a 3D clay starburst Instagram carousel cover slide (1080×1350 portrait).", "Content Creation"),
+  C("Ig Cover Cinematic", "/ig-cover-cinematic", "Generate a cinematic, photorealistic Instagram carousel cover slide...", "Content Creation"),
+  C("Intro", "/intro", "Generate 3 video intro/hook options for: ...", "Content Creation"),
+  C("Next", "/next", "Analyze what's working on the channel RIGHT NOW, suggest the next best move.", "Content Creation"),
+  C("Notion", "/notion", "Save the current script to Notion. Sub-command: ...", "Content Creation"),
+  C("Posted", "/posted", "Mark a script as posted in the pipeline. Usage: /posted [topic name, keyword, or ID]", "Content Creation"),
+  C("Publish", "/publish", "Save the current script to the pipeline dashboard. This replaces '/notion' for the new flow.", "Content Creation"),
+  C("Ready", "/ready", "Mark a script as ready to publish in the pipeline. Usage: /ready [topic name, keyword]", "Content Creation"),
+  C("Resource Package", "/resource-package", "Automatically build a complete downloadable resource package from the current script...", "Content Creation"),
+  C("Resource Script", "/resource-script", "Generate a resource-first script. This is the opposite of '/script [tool]' – instead...", "Content Creation"),
+  C("Screen Record", "/screen-record", "Generate or run a Playwright automation script from a brief: ...", "Content Creation"),
+  C("Script", "/script", "Generate a viral script about: ...", "Content Creation"),
+  C("Skool Post", "/skool-post", "Repurpose a published video into a Skool community post with bonus insights...", "Content Creation"),
+  C("Sponsored", "/sponsored", "Generate a script for a sponsored/paid campaign. Paste the brief: ...", "Content Creation"),
+  C("Teleprompter", "/teleprompter", "Reformat the current script for teleprompter use.", "Content Creation"),
+  C("Titles", "/titles", "Generate YouTube title ideas from a video file.", "Content Creation"),
+  C("Viral", "/viral", "Generate a viral script with full production notes for: ...", "Content Creation"),
+  C("Youtube", "/youtube", "Analyze YouTube competitor channels for trending topics and content opportunities...", "Content Creation"),
+  C("Youtube Prep", "/youtube-prep", "Prepare a full YouTube long-form video package for: ...", "Content Creation"),
+  // Research & Strategy
+  C("Analyze", "/analyze", "Analyze a competitor's Instagram content patterns: ...", "Research & Strategy"),
+  C("Brief", "/brief", "Create a screen recording brief for a sponsored integration with: ...", "Research & Strategy"),
+  C("Email Briefing", "/email-briefing", "Purpose: Scan Gmail for brand deal emails, analyze what needs attention, and draft replies.", "Research & Strategy"),
+  C("Hunt", "/hunt", "Find the best free resources, deals, credits, and templates for: ...", "Research & Strategy"),
+  C("Morning", "/morning", "Give me a daily trending AI briefing with script opportunities. This is briefing only.", "Research & Strategy"),
+  C("Research", "/research", "Run a full YouTube competitor research sweep, generate a .docx report with findings.", "Research & Strategy"),
+  C("Resource", "/resource", "Generate a resource for the current script. Only run this AFTER a script has been written.", "Research & Strategy"),
+  C("Trending", "/trending", "Find me trending AI topics and generate a script for the best one.", "Research & Strategy"),
+  // Design & Visuals
+  C("Analogy", "/analogy", "Generate a visual analogy graphic explaining: ...", "Design & Visuals"),
+  S("Animated Website", "skill: animated-website", "Convert video files into scroll-animated websites with luxury-grade design...", "Design & Visuals"),
+  C("Cowork Visualizer", "/cowork-visualizer", "Visualize a Claude Cowork system or workflow as a beautiful self-contained page...", "Design & Visuals"),
+  C("Diagram", "/diagram", "Generate an Excalidraw visual diagram for: ...", "Design & Visuals"),
+  C("Diff Review", "/diff-review", "Generate a visual HTML diff review — before/after architecture comparison with notes.", "Design & Visuals"),
+  S("Explainer Graphic", "skill: explainer-graphic", "Generate visual explainer graphics and infographics for videos using Gemini...", "Design & Visuals"),
+  C("Generate Web Diagram", "/generate-web-diagram", "Generate a beautiful standalone HTML diagram and open it in the browser.", "Design & Visuals"),
+  C("Graphic", "/graphic", "Generate an AI-powered infographic to break down: ...", "Design & Visuals"),
+  C("Infographic", "/infographic", "Generate a whiteboard-style infographic explaining: ...", "Design & Visuals"),
+  C("Love", "/love", "Save a thumbnail I love to my taste memory: ...", "Design & Visuals"),
+  S("Premium Infographic", "skill: premium-infographic", "Generate dark premium minimalist infographics for YouTube videos...", "Design & Visuals"),
+  C("Premium Thumbnail", "/premium-thumbnail", "Generate 5 premium-style thumbnail concepts and actual images for: ...", "Design & Visuals"),
+  C("Project Recap", "/project-recap", "Generate a visual HTML project recap — rebuild the mental model of a project's state.", "Design & Visuals"),
+  C("Sections", "/sections", "Generate visual section slides for a long-form video: ...", "Design & Visuals"),
+  S("Slide Infographics", "skill: slide-infographics", "Build a dark premium mid-video slideshow for a YouTube video.", "Design & Visuals"),
+  C("Stats", "/stats", "Pull recent Instagram performance stats, analyze patterns, and generate a visual report.", "Design & Visuals"),
+  C("Thumbnail", "/thumbnail", "Generate 5 thumbnail concepts for: ...", "Design & Visuals"),
+  C("Thumbnail Pairing", "/thumbnail-pairing", "Analyze uploaded thumbnails and titles, then push the best pairings for YouTube.", "Design & Visuals"),
+  C("Viral Thumbnail", "/viral-thumbnail", "Generate 5 viral-style (no person) thumbnail concepts and actual images.", "Design & Visuals"),
+  S("Visual Analogy", "skill: visual-analogy", "Generate split-panel analogies that explain technical concepts visually.", "Design & Visuals"),
+  S("Visual Explainer", "skill: visual-explainer", "Generate beautiful, self-contained HTML pages that visually explain systems, code, and ideas.", "Design & Visuals"),
+  S("Custom Greeting Card", "skill: custom-greeting-card", "Generate personalized digital greeting cards (get-well, birthday, celebration, sympathy) with a custom name and message.", "Design & Visuals"),
+  // Business
+  S("Contract Reviewer", "skill: contract-reviewer", "Review any contract and flag what matters before you sign. Use this skill for any agreement.", "Business"),
+  C("Deals", "/deals", "Manage and view brand deals from the Notion CRM. Sub-command: ...", "Business"),
+  // Communication
+  C("Inbox Triage", "/inbox-triage", "Run my morning inbox triage. Pull recent emails from Gmail, identify what needs a reply.", "Communication"),
+  C("Check Email", "/checkemail", "advanced-gmail-mcp — 4-phase daily email cleanup: automated sweep, classify, batch actions, clean daily summary.", "Communication"),
+  // Automation
+  C("Autopsy", "/autopsy", "Deep-dive a single post to understand exactly WHY it performed the way it did.", "Automation"),
+  S("BDR Daily Pipeline", "skill: bdr-daily-pipeline", "ScientiaCapital/skills — daily pipeline automation (Mon–Fri) that extracts net-new prospects, cross-references them, and populates Gmail drafts.", "Automation"),
+  C("Scheduled", "/scheduled", "Mark a script as scheduled in the pipeline. Usage: /scheduled [topic name]", "Automation"),
+  // Productivity
+  C("Fact Check", "/fact-check", "Verify the factual accuracy of a document against the actual codebase, correct errors.", "Productivity"),
+  C("Filmkit", "/filmkit", "Generate a full filmkit for: ...", "Productivity"),
+  C("Followers", "/followers", "Check the current Instagram follower count for @aifornontechies.", "Productivity"),
+  C("Plan Review", "/plan-review", "Generate a visual HTML review of the current codebase state and proposed plan.", "Productivity"),
+  // System & Tools
+  S("Skills Audit", "skill: skills-audit", "Audit installed skills and commands for duplicates, overlaps, and broken setups.", "System & Tools"),
+  S("Bootstrap", "skill: bootstrap", "One-time setup helper that scaffolds a new Claude Cowork project structure.", "System & Tools"),
+  C("Cleanup", "/cleanup", "Remove stale files and orphaned drafts from the working directory.", "System & Tools"),
+  C("Config", "/config", "View and edit the Claude Cowork configuration for this project.", "System & Tools"),
+  C("Sync", "/sync", "Sync the local pipeline state with Notion and the dashboard.", "System & Tools"),
+  C("Backup", "/backup", "Create a timestamped backup of scripts, configs, and pipeline state.", "System & Tools"),
+  C("Status", "/status", "Show the current pipeline status across every active project.", "System & Tools"),
+  C("Update", "/update", "Pull the latest versions of installed skills and commands.", "System & Tools"),
+  C("Export", "/export", "Export the full skills dashboard as a shareable HTML file.", "System & Tools"),
+
+  // ---- Claude Code Plugins (installed globally) ----
+  S("Superpowers", "skill: superpowers", "Skill library for disciplined workflows — brainstorming, TDD, systematic debugging, writing & executing plans, code review, git worktrees. v6.1.1.", "System & Tools", "Claude Code Plugins"),
+  S("Context Mode", "skill: context-mode", "Process large command/file outputs in a sandbox so only the derived answer enters context — major token savings. v1.0.169.", "System & Tools", "Claude Code Plugins"),
+  S("Claude Mem", "skill: claude-mem", "Persistent cross-session memory — captures observations and injects relevant past work automatically. v13.10.1.", "System & Tools", "Claude Code Plugins"),
+  S("Frontend Design", "skill: frontend-design", "Distinctive, intentional visual-design guidance for building or reshaping UI so it doesn't read as templated.", "Design & Visuals", "Claude Code Plugins"),
+
+  // ---- Global Skills (~/.claude/skills) ----
+  S("UI/UX Pro Max", "skill: ui-ux-pro-max", "Design intelligence: 67 styles, 161 palettes, 57 font pairings, 25 charts across 21 stacks. Refreshed to v2.11.0 (most-starred on GitHub).", "Design & Visuals", "Global Skills"),
+  S("UI Craft", "skill: ui-craft", "Anti-slop UI craft with a required Discovery phase — layout, typography, color, motion, accessibility, and polish.", "Design & Visuals", "Global Skills"),
+  S("Grill Me", "/grilling", "A relentless interview that stress-tests and sharpens a plan or design before you build it.", "Productivity", "Global Skills"),
+  S("Taste Skill", "skill: taste-skill", "Anti-slop frontend for landing pages, portfolios, and redesigns — infers the right direction and ships non-templated UI.", "Design & Visuals", "Global Skills"),
+  S("Impeccable", "/impeccable", "Design, audit, and polish frontend interfaces. Run '/impeccable polish' to sweep the whole UI before shipping.", "Design & Visuals", "Global Skills"),
+  S("Emil Design Eng", "skill: emil-design-eng", "Emil Kowalski's philosophy on UI polish, component design, and the invisible details that make software feel great.", "Design & Visuals", "Global Skills"),
+  S("Improve Animations", "skill: improve-animations", "Survey a codebase's motion and produce a prioritized audit plus implementation plans to level up animations.", "Design & Visuals", "Global Skills"),
+  S("Review Animations", "skill: review-animations", "Senior motion-advisor review of a codebase's animation and transition code.", "Design & Visuals", "Global Skills"),
+  S("Banner Design", "skill: banner-design", "Design social, ad, web-hero, and print banners with AI visuals — 22 styles, multiple art directions.", "Design & Visuals", "Global Skills"),
+  S("Brand", "skill: brand", "Brand voice, visual identity, messaging frameworks, and asset consistency for branded content.", "Business", "Global Skills"),
+  S("Design", "skill: design", "All-in-one design: brand identity, logos (55 styles), corporate identity program, slides, banners, icons, social photos.", "Design & Visuals", "Global Skills"),
+  S("Design System", "skill: design-system", "Three-layer token architecture (primitive→semantic→component), component specs, and strategic slide generation.", "Design & Visuals", "Global Skills"),
+  S("Slides", "skill: slides", "Strategic HTML presentations with Chart.js, design tokens, responsive layouts, and copywriting formulas.", "Design & Visuals", "Global Skills"),
+  S("UI Styling", "skill: ui-styling", "Beautiful, accessible UIs with shadcn/ui + Tailwind — dialogs, forms, tables, dark mode, and theming.", "Design & Visuals", "Global Skills"),
+];
+
+const ORDER = ["Content Creation", "Research & Strategy", "Design & Visuals", "Business", "Communication", "Automation", "Productivity", "System & Tools"];
+const ICONS = {
+  "Content Creation": "M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
+  "Research & Strategy": "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M21 21l-4.3-4.3",
+  "Design & Visuals": "M12 3l1.9 5.8L20 11l-6.1 1.2L12 18l-1.9-5.8L4 11l6.1-2.2Z",
+  "Business": "M20 7H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Z M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2",
+  "Communication": "M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2Z",
+  "Automation": "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1Z",
+  "Productivity": "M13 2L4 14h7l-1 8 9-12h-7l1-8Z",
+  "System & Tools": "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.2-2.2 2.8-2.8Z",
+};
+const STAR = "<g stroke='currentColor' stroke-width='1.3' stroke-linecap='round'><line x1='12' y1='3' x2='12' y2='21'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='5.5' y1='5.5' x2='18.5' y2='18.5'/><line x1='18.5' y1='5.5' x2='5.5' y2='18.5'/><line x1='12' y1='4.5' x2='12' y2='19.5' transform='rotate(22.5 12 12)'/><line x1='4.5' y1='12' x2='19.5' y2='12' transform='rotate(22.5 12 12)'/><line x1='12' y1='4.5' x2='12' y2='19.5' transform='rotate(67.5 12 12)'/><line x1='4.5' y1='12' x2='19.5' y2='12' transform='rotate(67.5 12 12)'/></g>";
+
+const STORAGE_KEY = "claude-cowork-custom-skills";
+const state = { search: "", active: "All", modalOpen: false, formError: false, copied: null };
+
+// Auto "last updated" — reads the file's own Last-Modified (set to deploy time by Netlify).
+// Updates itself on every redeploy; never needs a manual bump.
+const LAST_UPDATED = (() => {
+  let d = new Date(document.lastModified);
+  if (isNaN(d) || d.getFullYear() < 2020) d = new Date();
+  const mon = d.toLocaleString("en-US", { month: "short" }).toUpperCase();
+  return { full: mon + " " + d.getDate() + ", " + d.getFullYear(), short: mon + " " + d.getDate() };
+})();
+
+function loadItems() {
+  const base = SEED.slice();
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    if (Array.isArray(saved)) return base.concat(saved.map(s => ({ project: SHORT, ...s })));
+  } catch (e) {}
+  return base;
+}
+let ITEMS = loadItems();
+
+const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+function render() {
+  const q = state.search.trim().toLowerCase();
+  const match = (it) => {
+    if (state.active !== "All" && it.category !== state.active) return false;
+    if (!q) return true;
+    return (it.title + " " + it.command + " " + it.desc + " " + it.project).toLowerCase().includes(q);
+  };
+  const filtered = ITEMS.filter(match);
+  const total = ITEMS.length;
+  const skillsCount = ITEMS.filter(i => i.type === "skill").length;
+  const commandsCount = total - skillsCount;
+  const categoriesCount = new Set(ITEMS.map(i => i.category)).size;
+
+  const pills = ["All", ...ORDER].map(label => {
+    const on = state.active === label;
+    const style = on
+      ? "border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .14s ease;white-space:nowrap;background:linear-gradient(180deg,#e8c766,#b8912e);color:#1c1409;border:1px solid #9a7b26;box-shadow:0 4px 12px -4px rgba(184,145,46,.55);"
+      : "border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .14s ease;white-space:nowrap;background:#221c17;color:#c3bab0;border:1px solid #382e25;";
+    return `<button style="${style}" onclick="setActive('${label.replace(/'/g,"\\'")}')">${esc(label)}</button>`;
+  }).join("");
+
+  const sections = ORDER.map(name => {
+    const cards = filtered.filter(it => it.category === name);
+    if (!cards.length) return "";
+    const cardsHtml = cards.map(it => {
+      const copied = state.copied === it.command;
+      const badge = it.type === "skill"
+        ? `<span style="font-size:10px;font-weight:700;letter-spacing:.7px;color:#b8912e;background:#f3e8c8;border:1px solid #e6d5a3;padding:3px 8px;border-radius:6px;flex-shrink:0;">SKILL</span>`
+        : `<span style="font-size:10px;font-weight:700;letter-spacing:.7px;color:#7d756a;background:#ebe7df;border:1px solid #ddd6cb;padding:3px 8px;border-radius:6px;flex-shrink:0;">COMMAND</span>`;
+      const copiedTag = copied
+        ? `<span style="position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:5px;background:#9ccc4f;color:#1c1713;font-size:10.5px;font-weight:700;letter-spacing:.6px;padding:4px 10px;border-radius:999px;animation:scd-fade .15s ease both;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>COPIED</span>`
+        : "";
+      return `<div class="scd-card" onclick="copyCmd('${esc(it.command).replace(/'/g,"\\'")}')" title="Click to copy" style="background:#f7f4ef;border:1px solid #e7e1d8;border-radius:14px;padding:18px 19px 16px;display:flex;flex-direction:column;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.18);position:relative;">
+        ${copiedTag}
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <svg width="22" height="22" viewBox="0 0 24 24" style="color:#d4af37;flex-shrink:0;margin-top:2px;">${STAR}</svg>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:15.5px;color:#23211e;line-height:1.25;">${esc(it.title)}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+              <span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:#b8912e;word-break:break-all;">${esc(it.command)}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c4b48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:13.5px;line-height:1.5;color:#6b665e;margin-top:13px;flex:1;">${esc(it.desc)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:15px;padding-top:13px;border-top:1px solid #ece6dd;">
+          <span style="font-size:10.5px;color:#a39c91;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">Project: ${esc(it.project)}</span>
+          ${badge}
+        </div>
+      </div>`;
+    }).join("");
+    return `<div style="margin-top:38px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+        <span style="width:32px;height:32px;border-radius:9px;background:linear-gradient(180deg,#e8c766,#b8912e);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px -4px rgba(184,145,46,.6);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${ICONS[name]}"/></svg>
+        </span>
+        <h2 style="font-family:'Newsreader',serif;font-size:25px;font-weight:500;font-style:italic;margin:0;color:#f0e9e1;flex:1;">${esc(name)}</h2>
+        <span style="font-size:12px;color:#8a817a;background:#221c17;border:1px solid #34291f;border-radius:7px;padding:3px 10px;font-weight:600;">${cards.length}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:16px;">${cardsHtml}</div>
+    </div>`;
+  }).join("");
+
+  const noResults = filtered.length === 0;
+  const catOptions = ORDER.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join("");
+
+  const modal = state.modalOpen ? `
+    <div onclick="closeModal()" style="position:fixed;inset:0;background:rgba(12,9,7,.66);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div onclick="event.stopPropagation()" style="width:100%;max-width:520px;background:#1f1915;border:1px solid #382e25;border-radius:20px;padding:30px 30px 26px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);animation:scd-pop .22s ease both;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+          <div>
+            <h3 style="font-family:'Newsreader',serif;font-size:27px;font-weight:500;margin:0;color:#f2ece5;">Add a <span style="font-style:italic;color:#d4af37;">new skill</span></h3>
+            <p style="font-size:13.5px;color:#9a9189;margin:6px 0 0;">Register a skill or slash command in your dashboard.</p>
+          </div>
+          <button class="scd-close" onclick="closeModal()" style="background:#2a221b;border:1px solid #3a3128;border-radius:9px;width:34px;height:34px;color:#b3aaa1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div style="margin-top:24px;display:flex;flex-direction:column;gap:16px;">
+          <div><label style="display:block;font-size:11px;letter-spacing:1.2px;font-weight:600;color:#9a9189;margin-bottom:7px;">TITLE</label>
+            <input id="f-title" type="text" placeholder="e.g. Thumbnail Pairing" style="width:100%;background:#181310;border:1px solid #382e25;border-radius:10px;padding:12px 14px;color:#f0e9e1;font-size:14.5px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:11px;letter-spacing:1.2px;font-weight:600;color:#9a9189;margin-bottom:7px;">COMMAND</label>
+            <input id="f-command" type="text" placeholder="/my-command" style="width:100%;background:#181310;border:1px solid #382e25;border-radius:10px;padding:12px 14px;color:#d4af37;font-size:14px;font-family:ui-monospace,monospace;"></div>
+          <div><label style="display:block;font-size:11px;letter-spacing:1.2px;font-weight:600;color:#9a9189;margin-bottom:7px;">DESCRIPTION</label>
+            <textarea id="f-desc" rows="3" placeholder="What does this skill do?" style="width:100%;background:#181310;border:1px solid #382e25;border-radius:10px;padding:12px 14px;color:#f0e9e1;font-size:14px;font-family:inherit;resize:vertical;line-height:1.5;"></textarea></div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:170px;"><label style="display:block;font-size:11px;letter-spacing:1.2px;font-weight:600;color:#9a9189;margin-bottom:7px;">CATEGORY</label>
+              <select id="f-category" style="width:100%;background:#181310;border:1px solid #382e25;border-radius:10px;padding:12px 14px;color:#f0e9e1;font-size:14.5px;font-family:inherit;cursor:pointer;">${catOptions}</select></div>
+            <div style="flex:1;min-width:120px;"><label style="display:block;font-size:11px;letter-spacing:1.2px;font-weight:600;color:#9a9189;margin-bottom:7px;">TYPE</label>
+              <select id="f-type" style="width:100%;background:#181310;border:1px solid #382e25;border-radius:10px;padding:12px 14px;color:#f0e9e1;font-size:14.5px;font-family:inherit;cursor:pointer;"><option value="command">Command</option><option value="skill">Skill</option></select></div>
+          </div>
+        </div>
+        ${state.formError ? `<div style="margin-top:14px;font-size:13px;color:#e0b84f;">A title is required.</div>` : ""}
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:26px;">
+          <button class="scd-cancel" onclick="closeModal()" style="background:transparent;border:1px solid #3a3128;color:#cdc6bd;border-radius:11px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+          <button class="scd-btn-gold" onclick="submitSkill()" style="background:linear-gradient(180deg,#e8c766,#b8912e);border:1px solid #9a7b26;color:#1c1409;border-radius:11px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 6px 18px -6px rgba(184,145,46,.6);">Add Skill</button>
+        </div>
+      </div>
+    </div>` : "";
+
+  document.getElementById("app").innerHTML = `
+  <div style="min-height:100vh;background:radial-gradient(1300px 680px at 50% -8%, #241d12 0%, #17120b 52%, #100c07 100%);color:#efe9e2;padding:0 0 100px;position:relative;overflow:hidden;">
+    <div style="position:fixed;inset:0;z-index:0;pointer-events:none;display:flex;align-items:center;justify-content:center;">
+      <img src="angwithonyx.jpeg" alt="" style="height:94vh;width:auto;opacity:.11;filter:sepia(1) saturate(1.5) hue-rotate(-8deg) brightness(.9);-webkit-mask-image:radial-gradient(ellipse 62% 58% at 50% 46%, #000 38%, transparent 76%);mask-image:radial-gradient(ellipse 62% 58% at 50% 46%, #000 38%, transparent 76%);">
+    </div>
+    <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background:url('6.png') center 46%/135% auto no-repeat;mix-blend-mode:screen;opacity:.4;"></div>
+    <div style="position:absolute;top:26px;right:34px;z-index:5;">
+      <button class="scd-add" onclick="openModal()" style="display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,#e8c766,#b8912e);color:#1c1409;border:1px solid #9a7b26;border-radius:11px;padding:11px 18px 11px 15px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(184,145,46,.7), inset 0 1px 0 rgba(255,255,255,.25);letter-spacing:.2px;white-space:nowrap;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1c1409" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add New Skill
+      </button>
+    </div>
+    <div style="max-width:1180px;margin:0 auto;padding:0 34px;position:relative;z-index:1;">
+      <div style="text-align:center;padding:64px 0 0;">
+        <div style="display:inline-flex;align-items:center;gap:10px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" style="color:#d4af37;"><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="12" y1="2.5" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="5.2" y1="5.2" x2="18.8" y2="18.8"/><line x1="18.8" y1="5.2" x2="5.2" y2="18.8"/><line x1="12" y1="4" x2="12" y2="20" transform="rotate(22.5 12 12)"/><line x1="4" y1="12" x2="20" y2="12" transform="rotate(22.5 12 12)"/><line x1="12" y1="4" x2="12" y2="20" transform="rotate(67.5 12 12)"/><line x1="4" y1="12" x2="20" y2="12" transform="rotate(67.5 12 12)"/></g></svg>
+          <span style="font-family:'Newsreader',serif;font-size:23px;font-weight:500;letter-spacing:.2px;color:#f3ede6;">Claude Cowork</span>
+        </div>
+        <div style="margin:22px 0 4px;">
+          <span style="display:inline-flex;align-items:center;gap:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);color:#e6c96e;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:1.4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#d4af37;box-shadow:0 0 8px #d4af37;"></span>REFRESHED ${LAST_UPDATED.full}
+          </span>
+        </div>
+        <h1 style="font-family:'Newsreader',serif;font-weight:500;font-size:66px;line-height:1.05;margin:14px 0 0;letter-spacing:-.5px;color:#f4eee7;">My <span style="font-style:italic;color:#d4af37;">Skills</span> Dashboard</h1>
+        <p style="max-width:560px;margin:18px auto 0;font-size:16px;line-height:1.6;color:#b3aaa1;">Every skill and slash command installed on your Claude Cowork setup, in one place. Search, filter, or click any card to copy its trigger.</p>
+        <div style="display:flex;justify-content:center;gap:54px;margin-top:40px;flex-wrap:wrap;">
+          <div style="text-align:center;"><div style="font-family:'Newsreader',serif;font-size:38px;font-weight:600;color:#f0e9e1;line-height:1;">${total}</div><div style="font-size:11px;letter-spacing:1.6px;color:#8f8579;margin-top:8px;font-weight:600;">TOTAL</div></div>
+          <div style="text-align:center;"><div style="font-family:'Newsreader',serif;font-size:38px;font-weight:600;color:#d4af37;line-height:1;">${skillsCount}</div><div style="font-size:11px;letter-spacing:1.6px;color:#8f8579;margin-top:8px;font-weight:600;">SKILLS</div></div>
+          <div style="text-align:center;"><div style="font-family:'Newsreader',serif;font-size:38px;font-weight:600;color:#d4af37;line-height:1;">${commandsCount}</div><div style="font-size:11px;letter-spacing:1.6px;color:#8f8579;margin-top:8px;font-weight:600;">COMMANDS</div></div>
+          <div style="text-align:center;"><div style="font-family:'Newsreader',serif;font-size:38px;font-weight:600;color:#f0e9e1;line-height:1;">${categoriesCount}</div><div style="font-size:11px;letter-spacing:1.6px;color:#8f8579;margin-top:8px;font-weight:600;">CATEGORIES</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top:54px;background:linear-gradient(180deg,#241d18,#1e1814);border:1px solid #34291f;border-radius:18px;padding:30px 34px;position:relative;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.03) inset;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#9ccc4f 30%,#d4af37 80%,transparent);"></div>
+        <div style="display:flex;gap:34px;align-items:center;flex-wrap:wrap;">
+          <div style="position:relative;width:118px;height:118px;flex-shrink:0;">
+            <svg width="118" height="118" viewBox="0 0 118 118"><circle cx="59" cy="59" r="50" fill="none" stroke="#2e2620" stroke-width="9"/><circle cx="59" cy="59" r="50" fill="none" stroke="#9ccc4f" stroke-width="9" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="24" transform="rotate(-90 59 59)"/></svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <span style="font-family:'Newsreader',serif;font-size:34px;font-weight:600;color:#f0e9e1;line-height:1;">${total}</span>
+              <span style="font-size:9px;letter-spacing:1.8px;color:#9ccc4f;margin-top:3px;font-weight:700;">HEALTHY</span>
+            </div>
+          </div>
+          <div style="flex:1;min-width:260px;">
+            <div style="display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:1.4px;color:#9ccc4f;font-weight:700;font-family:ui-monospace,monospace;"><span style="width:6px;height:6px;border-radius:50%;background:#9ccc4f;"></span>SYSTEM AUDIT · ${LAST_UPDATED.short}</div>
+            <div style="font-family:'Newsreader',serif;font-size:27px;font-weight:500;margin:8px 0 2px;color:#f2ece5;">Your system is <span style="font-style:italic;">stocked</span></div>
+            <div style="font-size:14px;color:#9a9189;">${skillsCount} skills and ${commandsCount} commands installed and ready.</div>
+            <div style="display:flex;gap:38px;margin-top:18px;flex-wrap:wrap;">
+              <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">4</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">PLUGINS</div></div>
+              <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">14</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">GLOBAL SKILLS</div></div>
+              <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">${categoriesCount}</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">CATEGORIES</div></div>
+              <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">0</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">BROKEN</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:14px;background:#1a140f;border:1px solid #2e251d;border-radius:11px;padding:13px 16px;">
+            <span style="font-size:10px;font-weight:700;letter-spacing:1px;color:#e0b84f;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.3);padding:4px 9px;border-radius:6px;flex-shrink:0;">NEW</span>
+            <div><div style="font-weight:700;font-size:14px;color:#ece5dd;">Added your plugins + global skills</div><div style="font-size:13px;color:#94897f;margin-top:2px;">Superpowers, Context Mode, Claude Mem, UI/UX Pro Max, UI Craft, Grill Me and more.</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#1a140f;border:1px solid #2e251d;border-radius:11px;padding:13px 16px;">
+            <span style="font-size:10px;font-weight:700;letter-spacing:1px;color:#9ccc4f;background:rgba(156,204,79,.12);border:1px solid rgba(156,204,79,.3);padding:4px 9px;border-radius:6px;flex-shrink:0;">TIP</span>
+            <div><div style="font-weight:700;font-size:14px;color:#ece5dd;">Click any card to copy its trigger</div><div style="font-size:13px;color:#94897f;margin-top:2px;">Then paste it straight into Claude. Use search or the pills to filter.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:46px;display:flex;align-items:center;gap:12px;background:#211b16;border:1px solid #382e25;border-radius:14px;padding:0 18px;height:54px;max-width:760px;margin-left:auto;margin-right:auto;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8a817a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+        <input id="search-input" type="text" value="${esc(state.search)}" oninput="onSearch(this.value)" placeholder="Search skills, commands, descriptions..." style="flex:1;background:transparent;border:none;color:#f0e9e1;font-size:15px;font-family:inherit;height:100%;">
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:20px;">${pills}</div>
+
+      <div style="margin-top:30px;">${sections}</div>
+      ${noResults ? `<div style="text-align:center;padding:70px 0;color:#8a817a;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5b5249" stroke-width="1.5" style="margin-bottom:14px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+        <div style="font-family:'Newsreader',serif;font-size:22px;color:#c8c0b6;">No matches found</div>
+        <div style="font-size:14px;margin-top:6px;">Try a different search term or category.</div></div>` : ""}
+    </div>
+    ${modal}
+  </div>`;
+
+  const si = document.getElementById("search-input");
+  if (si && document.activeElement !== si && state.search) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
+}
+
+function onSearch(v) {
+  state.search = v;
+  render();
+  const si = document.getElementById("search-input");
+  if (si) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
+}
+function setActive(label) { state.active = label; render(); }
+function openModal() { state.modalOpen = true; state.formError = false; render(); }
+function closeModal() { state.modalOpen = false; render(); }
+function copyCmd(command) {
+  const done = () => { state.copied = command; render(); clearTimeout(window._ct); window._ct = setTimeout(() => { state.copied = null; render(); }, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(command).then(done).catch(() => done());
+  else done();
+}
+function submitSkill() {
+  const title = (document.getElementById("f-title").value || "").trim();
+  if (!title) { state.formError = true; render(); return; }
+  const type = document.getElementById("f-type").value || "command";
+  let command = (document.getElementById("f-command").value || "").trim();
+  if (!command) { const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); command = type === "skill" ? "skill: " + slug : "/" + slug; }
+  const desc = (document.getElementById("f-desc").value || "").trim() || "Custom skill added from the dashboard.";
+  const category = document.getElementById("f-category").value || ORDER[0];
+  const item = { title, command, desc, category, type, project: "Custom" };
+  ITEMS.push(item);
+  try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); saved.push(item); localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (e) {}
+  state.modalOpen = false; render();
+}
+
+render();
+</script>
+</body>
+</html>
