@@ -133,9 +133,9 @@ const SEED = [
   S("Context Mode", "skill: context-mode", "Process large command/file outputs in a sandbox so only the derived answer enters context — major token savings. v1.0.169.", "System & Tools", "Claude Code Plugins"),
   S("Claude Mem", "skill: claude-mem", "Persistent cross-session memory — captures observations and injects relevant past work automatically. v13.10.1.", "System & Tools", "Claude Code Plugins"),
   S("Frontend Design", "skill: frontend-design", "Distinctive, intentional visual-design guidance for building or reshaping UI so it doesn't read as templated.", "Design & Visuals", "Claude Code Plugins"),
+  S("UI/UX Pro Max", "skill: ui-ux-pro-max", "Design intelligence: 67 styles, 161 palettes, 57 font pairings, 25 charts across 21 stacks. Refreshed to v2.11.0 (most-starred on GitHub).", "Design & Visuals", "Claude Code Plugins"),
 
   // ---- Global Skills (~/.claude/skills) ----
-  S("UI/UX Pro Max", "skill: ui-ux-pro-max", "Design intelligence: 67 styles, 161 palettes, 57 font pairings, 25 charts across 21 stacks. Refreshed to v2.11.0 (most-starred on GitHub).", "Design & Visuals", "Global Skills"),
   S("UI Craft", "skill: ui-craft", "Anti-slop UI craft with a required Discovery phase — layout, typography, color, motion, accessibility, and polish.", "Design & Visuals", "Global Skills"),
   S("Grill Me", "/grilling", "A relentless interview that stress-tests and sharpens a plan or design before you build it.", "Productivity", "Global Skills"),
   S("Taste Skill", "skill: taste-skill", "Anti-slop frontend for landing pages, portfolios, and redesigns — infers the right direction and ships non-templated UI.", "Design & Visuals", "Global Skills"),
@@ -149,6 +149,10 @@ const SEED = [
   S("Design System", "skill: design-system", "Three-layer token architecture (primitive→semantic→component), component specs, and strategic slide generation.", "Design & Visuals", "Global Skills"),
   S("Slides", "skill: slides", "Strategic HTML presentations with Chart.js, design tokens, responsive layouts, and copywriting formulas.", "Design & Visuals", "Global Skills"),
   S("UI Styling", "skill: ui-styling", "Beautiful, accessible UIs with shadcn/ui + Tailwind — dialogs, forms, tables, dark mode, and theming.", "Design & Visuals", "Global Skills"),
+
+  // ---- Added Aug 20, 2026 ----
+  S("Task Observer", "skill: task-observer", "rebelytics/one-skill-to-rule-them-all. Meta-skill that watches your sessions, flags repeat patterns worth automating, logs your corrections, and proposes edits to your existing skills.", "System & Tools", "Global Skills"),
+  C("Find Skills", "npx skills find", "vercel-labs/skills. CLI for the open agent-skill ecosystem. Search across 76+ agents, then install with 'npx skills add <owner>/<repo>'.", "System & Tools", "CLI Tools"),
 ];
 
 const ORDER = ["Content Creation", "Research & Strategy", "Design & Visuals", "Business", "Communication", "Automation", "Productivity", "System & Tools"];
@@ -167,7 +171,7 @@ const STAR = "<g stroke='currentColor' stroke-width='1.3' stroke-linecap='round'
 const STORAGE_KEY = "claude-cowork-custom-skills";
 const state = { search: "", active: "All", modalOpen: false, formError: false, copied: null };
 
-// Auto "last updated" — reads the file's own Last-Modified (set to deploy time by Netlify).
+// Auto "last updated" — reads the file's own Last-Modified (set to deploy time by Vercel).
 // Updates itself on every redeploy; never needs a manual bump.
 const LAST_UPDATED = (() => {
   let d = new Date(document.lastModified);
@@ -290,10 +294,8 @@ function render() {
 
   document.getElementById("app").innerHTML = `
   <div style="min-height:100vh;background:radial-gradient(1300px 680px at 50% -8%, #241d12 0%, #17120b 52%, #100c07 100%);color:#efe9e2;padding:0 0 100px;position:relative;overflow:hidden;">
-    <div style="position:fixed;inset:0;z-index:0;pointer-events:none;display:flex;align-items:center;justify-content:center;">
-      <img src="angwithonyx.jpeg" alt="" style="height:94vh;width:auto;opacity:.11;filter:sepia(1) saturate(1.5) hue-rotate(-8deg) brightness(.9);-webkit-mask-image:radial-gradient(ellipse 62% 58% at 50% 46%, #000 38%, transparent 76%);mask-image:radial-gradient(ellipse 62% 58% at 50% 46%, #000 38%, transparent 76%);">
-    </div>
-    <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background:url('6.png') center 46%/135% auto no-repeat;mix-blend-mode:screen;opacity:.4;"></div>
+    <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 54% 46% at 50% 42%, rgba(212,175,55,.10) 0%, rgba(212,175,55,.035) 42%, transparent 72%);"></div>
+    <div style="position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(115deg, transparent 0 62px, rgba(240,217,138,.022) 62px 63px, transparent 63px 130px);"></div>
     <div style="position:absolute;top:26px;right:34px;z-index:5;">
       <button class="scd-add" onclick="openModal()" style="display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,#e8c766,#b8912e);color:#1c1409;border:1px solid #9a7b26;border-radius:11px;padding:11px 18px 11px 15px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(184,145,46,.7), inset 0 1px 0 rgba(255,255,255,.25);letter-spacing:.2px;white-space:nowrap;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1c1409" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add New Skill
@@ -335,7 +337,7 @@ function render() {
             <div style="font-family:'Newsreader',serif;font-size:27px;font-weight:500;margin:8px 0 2px;color:#f2ece5;">Your system is <span style="font-style:italic;">stocked</span></div>
             <div style="font-size:14px;color:#9a9189;">${skillsCount} skills and ${commandsCount} commands installed and ready.</div>
             <div style="display:flex;gap:38px;margin-top:18px;flex-wrap:wrap;">
-              <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">4</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">PLUGINS</div></div>
+              <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">5</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">PLUGINS</div></div>
               <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">14</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">GLOBAL SKILLS</div></div>
               <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">${categoriesCount}</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">CATEGORIES</div></div>
               <div><div style="font-family:'Newsreader',serif;font-size:24px;font-weight:600;color:#e9e2da;">0</div><div style="font-size:10px;letter-spacing:1.2px;color:#857c71;margin-top:3px;font-weight:600;">BROKEN</div></div>
@@ -345,7 +347,7 @@ function render() {
         <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;gap:14px;background:#1a140f;border:1px solid #2e251d;border-radius:11px;padding:13px 16px;">
             <span style="font-size:10px;font-weight:700;letter-spacing:1px;color:#e0b84f;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.3);padding:4px 9px;border-radius:6px;flex-shrink:0;">NEW</span>
-            <div><div style="font-weight:700;font-size:14px;color:#ece5dd;">Added your plugins + global skills</div><div style="font-size:13px;color:#94897f;margin-top:2px;">Superpowers, Context Mode, Claude Mem, UI/UX Pro Max, UI Craft, Grill Me and more.</div></div>
+            <div><div style="font-weight:700;font-size:14px;color:#ece5dd;">Added Task Observer + Find Skills CLI</div><div style="font-size:13px;color:#94897f;margin-top:2px;">Gap audit closed. Superpowers, Claude Mem and Impeccable were already in. Task Observer and the Find Skills CLI are now live.</div></div>
           </div>
           <div style="display:flex;align-items:center;gap:14px;background:#1a140f;border:1px solid #2e251d;border-radius:11px;padding:13px 16px;">
             <span style="font-size:10px;font-weight:700;letter-spacing:1px;color:#9ccc4f;background:rgba(156,204,79,.12);border:1px solid rgba(156,204,79,.3);padding:4px 9px;border-radius:6px;flex-shrink:0;">TIP</span>
